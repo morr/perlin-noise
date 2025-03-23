@@ -4,8 +4,20 @@ use super::*;
 pub struct DebugGridPlugin;
 impl Plugin for DebugGridPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, render_grid);
+        app.init_state::<DebugGridState>()
+            .add_systems(
+                Update,
+                render_grid.run_if(in_state(DebugGridState::Visible)),
+            )
+            .add_systems(Update, handle_keys);
     }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Default, States)]
+pub enum DebugGridState {
+    #[default]
+    Hidden,
+    Visible,
 }
 
 pub fn render_grid(mut gizmos: Gizmos) {
@@ -50,3 +62,16 @@ pub fn render_grid(mut gizmos: Gizmos) {
     );
 }
 
+#[allow(clippy::too_many_arguments)]
+fn handle_keys(
+    keys: Res<ButtonInput<KeyCode>>,
+    debug_grid_state: Res<State<DebugGridState>>,
+    mut next_debug_grid_state: ResMut<NextState<DebugGridState>>,
+) {
+    if keys.just_pressed(KeyCode::KeyG) {
+        match debug_grid_state.get() {
+            DebugGridState::Visible => next_debug_grid_state.set(DebugGridState::Hidden),
+            DebugGridState::Hidden => next_debug_grid_state.set(DebugGridState::Visible),
+        };
+    }
+}
