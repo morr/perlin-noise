@@ -3,6 +3,9 @@ use super::*;
 use crate::grid::NoiseTextureHandle;
 use crate::grid::TextureReadyEvent;
 use bevy::asset::RenderAssetUsages;
+use bevy::image::ImageFilterMode;
+use bevy::image::ImageSampler;
+use bevy::image::ImageSamplerDescriptor;
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use noise::{NoiseFn, Perlin};
 use rand::random;
@@ -45,15 +48,18 @@ impl Plugin for NoiseTexturePlugin {
 }
 
 fn setup_noise_texture(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
+    // Create a texture with dimensions matching the world size in pixels
     let texture_size = UVec2::new(
         (GRID_SIZE as f32 * TILE_SIZE) as u32,
         (GRID_SIZE as f32 * TILE_SIZE) as u32,
     );
 
+    // Calculate total pixels for RGBA format (4 bytes per pixel)
     let pixel_count = texture_size.x * texture_size.y;
     let texture_data = vec![0u8; (pixel_count * 4) as usize];
 
-    let texture = Image::new(
+    // Create the image with proper sampling settings
+    let mut texture = Image::new(
         Extent3d {
             width: texture_size.x,
             height: texture_size.y,
@@ -64,6 +70,16 @@ fn setup_noise_texture(mut commands: Commands, mut images: ResMut<Assets<Image>>
         TextureFormat::Rgba8Unorm,
         RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
     );
+
+    // Set nearest-neighbor filtering to prevent blurriness
+    // In Bevy 0.15, we use ImageSampler::Descriptor to wrap the SamplerDescriptor
+    texture.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
+        mag_filter: ImageFilterMode::Nearest,
+        min_filter: ImageFilterMode::Nearest,
+        mipmap_filter: ImageFilterMode::Nearest,
+        ..default()
+    });
+
 
     let texture_handle = images.add(texture);
     commands.insert_resource(NoiseTextureHandle(texture_handle));
@@ -130,11 +146,13 @@ fn generate_noise_texture(
     // Generate noise values for each pixel in the texture
     for y in 0..height {
         for x in 0..width {
-            // Scale coordinates to noise space - adjust frequency to match the original appearance
-            // We need to adjust the frequency since we're sampling more points now
-            let scaling_factor = 1.0 / TILE_SIZE as f64;
-            let nx = x as f64 * noise_settings.frequency * scaling_factor;
-            let ny = y as f64 * noise_settings.frequency * scaling_factor;
+            // Convert pixel coordinates to normalized grid coordinates (0.0 to 1.0)
+            let grid_x = x as f64 / width as f64;
+            let grid_y = y as f64 / height as f64;
+            
+            // Scale to the grid range and apply frequency
+            let nx = grid_x * GRID_SIZE as f64 * noise_settings.frequency;
+            let ny = grid_y * GRID_SIZE as f64 * noise_settings.frequency;
 
             let mut noise_value = 0.0;
             let mut amplitude = 1.0;
@@ -164,5 +182,6 @@ fn generate_noise_texture(
         }
     }
 
+    // Update the image data
     image.data = texture_data;
 }
