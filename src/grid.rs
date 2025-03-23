@@ -1,4 +1,6 @@
 use super::*;
+use super::noise::NoiseControlled;
+
 pub struct GridPlugin;
 
 impl Plugin for GridPlugin {
@@ -12,7 +14,7 @@ fn spawn_grid(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
-    let mesh = meshes.add(Rectangle::new(20.0, 20.0));
+    let mesh = meshes.add(Rectangle::new(TILE_SIZE, TILE_SIZE));
     let material = materials.add(Color::srgb(1.0, 1.0, 1.0));
 
     for x in 0..GRID_SIZE {
@@ -21,6 +23,8 @@ fn spawn_grid(
                 Mesh2d(mesh.clone()),
                 MeshMaterial2d(material.clone()),
                 Transform::from_xyz(grid_tile_edge_to_world(x), grid_tile_edge_to_world(y), 0.0),
+                NoiseControlled { position: (x, y) },
+                Name::new(format!("Tile ({}, {})", x, y)),
             ));
         }
     }
