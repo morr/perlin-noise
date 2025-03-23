@@ -22,12 +22,16 @@ fn spawn_grid(
             commands.spawn((
                 Mesh2d(mesh.clone()),
                 MeshMaterial2d(material.clone()),
-                Transform::from_xyz(grid_tile_edge_to_world(x), grid_tile_edge_to_world(y), 0.0),
+                Transform::from_xyz(grid_tile_center_to_world(x), grid_tile_center_to_world(y), 0.0),
                 NoiseControlled { position: (x, y) },
                 Name::new(format!("Tile ({}, {})", x, y)),
             ));
         }
     }
+}
+
+pub fn grid_tile_center_to_world(value: i32) -> f32 {
+    grid_tile_edge_to_world(value) + TILE_SIZE / 2.0
 }
 
 pub fn grid_tile_edge_to_world(value: i32) -> f32 {
