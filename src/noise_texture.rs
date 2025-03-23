@@ -17,16 +17,21 @@ pub struct NoiseSettings {
     pub octaves: usize,
     pub lacunarity: f64,
     pub persistence: f64,
+    pub offset_x: i32,
+    pub offset_y: i32,
 }
 
 impl Default for NoiseSettings {
     fn default() -> Self {
         Self {
-            seed: random(),
+            // seed: random(),
+            seed: 1655470700,
             frequency: 0.01,
             octaves: 4,
             lacunarity: 2.0,
             persistence: 0.5,
+            offset_x: 0,
+            offset_y: 0,
         }
     }
 }
@@ -47,10 +52,39 @@ impl Plugin for NoiseTexturePlugin {
     fn build(&self, app: &mut App) {
         app.init_resource::<NoiseSettings>()
             .add_event::<GenerateNoiseEvent>()
+            .add_systems(Update, keyboard_input_system)
             .add_systems(Startup, setup_noise_texture)
             .add_systems(Startup, initial_noise_generation.after(setup_noise_texture))
-            .add_systems(Update, keyboard_input_system)
             .add_systems(Update, generate_noise_and_update);
+    }
+}
+
+fn keyboard_input_system(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut noise_settings: ResMut<NoiseSettings>,
+    mut generate_noise_events: EventWriter<GenerateNoiseEvent>,
+) {
+    if keyboard_input.just_pressed(KeyCode::Space) {
+        noise_settings.seed = random();
+        generate_noise_events.send(GenerateNoiseEvent);
+    }
+    if keyboard_input.pressed(KeyCode::ShiftLeft) {
+        if keyboard_input.just_pressed(KeyCode::KeyA) {
+            noise_settings.offset_x += 1;
+            generate_noise_events.send(GenerateNoiseEvent);
+        }
+        if keyboard_input.just_pressed(KeyCode::KeyD) {
+            noise_settings.offset_x -= 1;
+            generate_noise_events.send(GenerateNoiseEvent);
+        }
+        if keyboard_input.just_pressed(KeyCode::KeyW) {
+            noise_settings.offset_y += 1;
+            generate_noise_events.send(GenerateNoiseEvent);
+        }
+        if keyboard_input.just_pressed(KeyCode::KeyS) {
+            noise_settings.offset_y -= 1;
+            generate_noise_events.send(GenerateNoiseEvent);
+        }
     }
 }
 
@@ -110,17 +144,6 @@ fn create_empty_texture(size: UVec2) -> Image {
     });
 
     texture
-}
-
-fn keyboard_input_system(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut noise_settings: ResMut<NoiseSettings>,
-    mut generate_noise_events: EventWriter<GenerateNoiseEvent>,
-) {
-    if keyboard_input.just_pressed(KeyCode::Space) {
-        noise_settings.seed = random();
-        generate_noise_events.send(GenerateNoiseEvent);
-    }
 }
 
 fn initial_noise_generation(
@@ -188,6 +211,7 @@ fn generate_noise_texture(
         return;
     };
 
+    // println!("{:?}x{:?}", image.width(), image.height());
     let width = image.width() as usize;
     let height = image.height() as usize;
 
@@ -197,9 +221,12 @@ fn generate_noise_texture(
     // Generate noise values for each pixel in the texture
     for y in 0..height {
         for x in 0..width {
+            let offseted_x = x as f64 + noise_settings.offset_x as f64 * TILE_SIZE as f64 * 30.0;
+            let offseted_y = y as f64 + noise_settings.offset_y as f64 * TILE_SIZE as f64 * 30.0;
+
             // Convert pixel coordinates to normalized grid coordinates (0.0 to 1.0)
-            let grid_x = x as f64 / width as f64;
-            let grid_y = y as f64 / height as f64;
+            let grid_x = offseted_x / width as f64;
+            let grid_y = offseted_y / height as f64;
 
             // Scale to the grid range and apply frequency
             let nx = grid_x * GRID_SIZE as f64 * noise_settings.frequency * TILE_SIZE as f64;

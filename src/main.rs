@@ -22,15 +22,29 @@ use crate::noise_texture::NoiseTexturePlugin;
 mod noise_settings_ui;
 use crate::noise_settings_ui::NoiseSettingsUiPlugin;
 
-const GRID_SIZE: i32 = 100;
-const TILE_SIZE: f32 = 10.0;
+const GRID_SIZE: i32 = 1000;
+const TILE_SIZE: f32 = 1.0;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins(
+            DefaultPlugins
+                .set(ImagePlugin::default_nearest())
+                .set(WindowPlugin {
+                    primary_window: Some(Window {
+                        position: WindowPosition::Automatic,
+                        mode: bevy::window::WindowMode::Windowed,
+                        // present_mode: bevy::window::PresentMode::AutoNoVsync,
+                        present_mode: bevy::window::PresentMode::AutoVsync,
+                        resolution: (1400.0, 1000.0).into(),
+                        ..default()
+                    }),
+                    ..default()
+                }),
+        )
         .add_plugins((
-            CameraPlugin, 
-            GridPlugin, 
+            CameraPlugin,
+            GridPlugin,
             NoiseTexturePlugin,
             NoiseSettingsUiPlugin,
         ))
