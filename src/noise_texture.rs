@@ -1,12 +1,13 @@
-// noise.rs
+// noise_texture.rs
 use super::*;
+use crate::grid::NoiseTexture;
 use crate::grid::NoiseTextureHandle;
 use crate::grid::TextureReadyEvent;
-use bevy::asset::RenderAssetUsages;
-use bevy::image::ImageFilterMode;
-use bevy::image::ImageSampler;
-use bevy::image::ImageSamplerDescriptor;
-use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+use bevy::{
+    asset::RenderAssetUsages,
+    image::{ImageAddressMode, ImageFilterMode, ImageSampler, ImageSamplerDescriptor},
+    render::render_resource::{Extent3d, TextureDimension, TextureFormat},
+};
 use noise::{NoiseFn, Perlin};
 use rand::random;
 
@@ -23,12 +24,19 @@ impl Default for NoiseSettings {
     fn default() -> Self {
         Self {
             seed: random(),
-            frequency: 0.01,
+            frequency: 0.01 * (TILE_SIZE / 2.0) as f64,
             octaves: 4,
             lacunarity: 2.0,
             persistence: 0.5,
         }
     }
+}
+
+#[derive(Resource)]
+pub struct NoiseTextureBuffers {
+    pub active: Handle<Image>,
+    pub inactive: Handle<Image>,
+    pub is_first_active: bool,
 }
 
 #[derive(Event)]
@@ -43,26 +51,46 @@ impl Plugin for NoiseTexturePlugin {
             .add_systems(Startup, setup_noise_texture)
             .add_systems(Startup, initial_noise_generation.after(setup_noise_texture))
             .add_systems(Update, keyboard_input_system)
-            .add_systems(Update, generate_noise);
+            .add_systems(Update, generate_noise_and_update);
     }
 }
 
 fn setup_noise_texture(mut commands: Commands, mut images: ResMut<Assets<Image>>) {
-    // Create a texture with dimensions matching the world size in pixels
+    // Create texture dimensions
     let texture_size = UVec2::new(
         (GRID_SIZE as f32 * TILE_SIZE) as u32,
         (GRID_SIZE as f32 * TILE_SIZE) as u32,
     );
 
+    // Create two identical textures with proper settings
+    let texture1 = create_empty_texture(texture_size);
+    let texture2 = create_empty_texture(texture_size);
+
+    let handle1 = images.add(texture1);
+    let handle2 = images.add(texture2);
+
+    // Store both handles and track which is active
+    commands.insert_resource(NoiseTextureBuffers {
+        active: handle1.clone(),
+        inactive: handle2,
+        is_first_active: true,
+    });
+
+    // For compatibility with existing code
+    commands.insert_resource(NoiseTextureHandle(handle1));
+}
+
+// Helper function to create a properly configured texture
+fn create_empty_texture(size: UVec2) -> Image {
     // Calculate total pixels for RGBA format (4 bytes per pixel)
-    let pixel_count = texture_size.x * texture_size.y;
+    let pixel_count = size.x * size.y;
     let texture_data = vec![0u8; (pixel_count * 4) as usize];
 
     // Create the image with proper sampling settings
     let mut texture = Image::new(
         Extent3d {
-            width: texture_size.x,
-            height: texture_size.y,
+            width: size.x,
+            height: size.y,
             depth_or_array_layers: 1,
         },
         TextureDimension::D2,
@@ -71,18 +99,18 @@ fn setup_noise_texture(mut commands: Commands, mut images: ResMut<Assets<Image>>
         RenderAssetUsages::RENDER_WORLD | RenderAssetUsages::MAIN_WORLD,
     );
 
-    // Set nearest-neighbor filtering to prevent blurriness
-    // In Bevy 0.15, we use ImageSampler::Descriptor to wrap the SamplerDescriptor
+    // Set nearest-neighbor filtering with proper address modes
     texture.sampler = ImageSampler::Descriptor(ImageSamplerDescriptor {
         mag_filter: ImageFilterMode::Nearest,
         min_filter: ImageFilterMode::Nearest,
         mipmap_filter: ImageFilterMode::Nearest,
+        address_mode_u: ImageAddressMode::ClampToEdge,
+        address_mode_v: ImageAddressMode::ClampToEdge,
+        address_mode_w: ImageAddressMode::ClampToEdge,
         ..default()
     });
 
-
-    let texture_handle = images.add(texture);
-    commands.insert_resource(NoiseTextureHandle(texture_handle));
+    texture
 }
 
 fn keyboard_input_system(
@@ -99,39 +127,63 @@ fn keyboard_input_system(
 fn initial_noise_generation(
     noise_settings: Res<NoiseSettings>,
     mut images: ResMut<Assets<Image>>,
-    noise_texture: Res<NoiseTextureHandle>,
+    buffers: Res<NoiseTextureBuffers>,
     mut texture_ready_events: EventWriter<TextureReadyEvent>,
 ) {
-    // Generate the initial noise texture
-    generate_noise_texture(&noise_settings, &mut images, &noise_texture);
+    // Generate the initial noise texture in both buffers for consistency
+    generate_noise_texture(&noise_settings, &mut images, &buffers.active);
+    generate_noise_texture(&noise_settings, &mut images, &buffers.inactive);
 
     // Signal that the texture is ready
     texture_ready_events.send(TextureReadyEvent);
 }
 
-fn generate_noise(
+// Combined system that handles both generating noise and updating materials
+fn generate_noise_and_update(
     mut events: EventReader<GenerateNoiseEvent>,
     noise_settings: Res<NoiseSettings>,
     mut images: ResMut<Assets<Image>>,
-    noise_texture: Res<NoiseTextureHandle>,
+    mut buffers: ResMut<NoiseTextureBuffers>,
+    mut noise_texture: ResMut<NoiseTextureHandle>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut query: Query<&mut MeshMaterial2d<ColorMaterial>, With<NoiseTexture>>,
 ) {
-    // Only process one event per frame to avoid multiple rapid updates
     if events.read().next().is_some() {
-        generate_noise_texture(&noise_settings, &mut images, &noise_texture);
+        // Generate the new noise in the inactive buffer
+        generate_noise_texture(&noise_settings, &mut images, &buffers.inactive);
+
+        // Manual swap using a temporary variable to avoid multiple mutable borrows
+        let temp = buffers.active.clone();
+        buffers.active = buffers.inactive.clone();
+        buffers.inactive = temp;
+
+        // Toggle the active buffer indicator
+        buffers.is_first_active = !buffers.is_first_active;
+
+        // Update the main handle
+        noise_texture.0 = buffers.active.clone();
+
+        // Create a new material with the updated texture
+        let new_material = materials.add(ColorMaterial::from(buffers.active.clone()));
+
+        // Update all NoiseTexture entities to use the new material
+        for mut mesh_material in query.iter_mut() {
+            *mesh_material = MeshMaterial2d(new_material.clone());
+        }
     }
 }
 
-// Fixed function that properly updates the texture with higher resolution
+// Function for generating the noise texture (remains unchanged)
 fn generate_noise_texture(
     noise_settings: &NoiseSettings,
     images: &mut Assets<Image>,
-    noise_texture: &NoiseTextureHandle,
+    texture_handle: &Handle<Image>,
 ) {
     // Get the Perlin noise generator with the current seed
     let perlin = Perlin::new(noise_settings.seed);
 
     // Get the image from the handle
-    let image = if let Some(image) = images.get_mut(&noise_texture.0) {
+    let image = if let Some(image) = images.get_mut(texture_handle) {
         image
     } else {
         return;
@@ -149,7 +201,7 @@ fn generate_noise_texture(
             // Convert pixel coordinates to normalized grid coordinates (0.0 to 1.0)
             let grid_x = x as f64 / width as f64;
             let grid_y = y as f64 / height as f64;
-            
+
             // Scale to the grid range and apply frequency
             let nx = grid_x * GRID_SIZE as f64 * noise_settings.frequency;
             let ny = grid_y * GRID_SIZE as f64 * noise_settings.frequency;
