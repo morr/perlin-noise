@@ -23,7 +23,6 @@ fn spawn_grid(
                 MeshMaterial2d(materials.add(Color::srgb(1.0, 1.0, 1.0))),
                 Transform::from_xyz(grid_tile_center_to_world(x), grid_tile_center_to_world(y), 0.0),
                 NoiseControlled { position: (x, y) },
-                Name::new(format!("Tile ({}, {})", x, y)),
             ));
         }
     }
