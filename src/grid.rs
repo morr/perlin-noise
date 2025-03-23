@@ -30,5 +30,5 @@ fn spawn_grid(
 }
 
 pub fn grid_tile_edge_to_world(value: i32) -> f32 {
-    value as f32 * TILE_SIZE
+    value as f32 * TILE_SIZE - GRID_SIZE as f32 / 2.0 * TILE_SIZE
 }
