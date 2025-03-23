@@ -19,13 +19,21 @@ use crate::debug_grid::DebugGridPlugin;
 mod noise_texture;
 use crate::noise_texture::NoiseTexturePlugin;
 
+mod noise_settings_ui;
+use crate::noise_settings_ui::NoiseSettingsUiPlugin;
+
 const GRID_SIZE: i32 = 100;
 const TILE_SIZE: f32 = 10.0;
 
 fn main() {
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins((CameraPlugin, GridPlugin, NoiseTexturePlugin))
+        .add_plugins((
+            CameraPlugin, 
+            GridPlugin, 
+            NoiseTexturePlugin,
+            NoiseSettingsUiPlugin,
+        ))
         .add_plugins((DebugGridPlugin, DebugUiPlugin))
         .add_plugins(FpsOverlayPlugin {
             config: FpsOverlayConfig {

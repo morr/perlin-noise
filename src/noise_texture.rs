@@ -1,4 +1,3 @@
-// noise_texture.rs
 use super::*;
 use crate::grid::NoiseTexture;
 use crate::grid::NoiseTextureHandle;
@@ -24,7 +23,7 @@ impl Default for NoiseSettings {
     fn default() -> Self {
         Self {
             seed: random(),
-            frequency: 0.01 * (TILE_SIZE / 2.0) as f64,
+            frequency: 0.01 * TILE_SIZE as f64,
             octaves: 4,
             lacunarity: 2.0,
             persistence: 0.5,

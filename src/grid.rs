@@ -1,6 +1,4 @@
-// grid.rs
 use super::*;
-// Remove unused imports - we don't need these anymore since setup_noise_texture moved
 
 #[derive(Resource)]
 pub struct NoiseTextureHandle(pub Handle<Image>);
