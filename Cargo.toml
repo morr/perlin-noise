@@ -8,7 +8,7 @@ bevy = { version = "0.15.2", features = ["dynamic_linking", "bevy_dev_tools"] }
 noise = "0.8.2"
 rand = "0.8.5"
 bevy_pancam = { version = "0.17", features = ["bevy_egui"] }
-bevy_egui = "0.33.0"
+bevy_egui = "0.32.0"
 
 [profile.dev]
 opt-level = 1

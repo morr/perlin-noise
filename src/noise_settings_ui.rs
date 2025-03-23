@@ -22,7 +22,6 @@ fn noise_settings_ui_system(
         egui::Window::new("Noise Settings").show(context.get_mut(), |ui| {
             let mut settings_changed = false;
 
-            // Seed input
             ui.horizontal(|ui| {
                 ui.label("Seed:");
                 settings_changed |= ui
@@ -34,7 +33,6 @@ fn noise_settings_ui_system(
                 }
             });
 
-            // Frequency slider
             settings_changed |= ui
                 .add(
                     egui::Slider::new(&mut noise_settings.frequency, 0.001..=0.1)
@@ -43,7 +41,6 @@ fn noise_settings_ui_system(
                 )
                 .changed();
 
-            // Octaves slider
             let mut octaves = noise_settings.octaves as i32;
             if ui
                 .add(egui::Slider::new(&mut octaves, 1..=8).text("Octaves"))
@@ -53,14 +50,12 @@ fn noise_settings_ui_system(
                 settings_changed = true;
             }
 
-            // Lacunarity slider
             settings_changed |= ui
                 .add(
                     egui::Slider::new(&mut noise_settings.lacunarity, 1.0..=4.0).text("Lacunarity"),
                 )
                 .changed();
 
-            // Persistence slider
             settings_changed |= ui
                 .add(
                     egui::Slider::new(&mut noise_settings.persistence, 0.0..=1.0)
@@ -68,7 +63,6 @@ fn noise_settings_ui_system(
                 )
                 .changed();
 
-            // If any setting was changed, regenerate the noise
             if settings_changed {
                 generate_noise_events.send(GenerateNoiseEvent);
             }
