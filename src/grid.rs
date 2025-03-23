@@ -7,9 +7,6 @@ impl Plugin for GridPlugin {
     }
 }
 
-const GRID_SIZE: i32 = 100;
-const TILE_SIZE: f32 = 10.0;
-
 fn spawn_grid(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
