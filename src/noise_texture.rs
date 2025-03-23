@@ -23,7 +23,7 @@ impl Default for NoiseSettings {
     fn default() -> Self {
         Self {
             seed: random(),
-            frequency: 0.01 * TILE_SIZE as f64,
+            frequency: 0.01,
             octaves: 4,
             lacunarity: 2.0,
             persistence: 0.5,
@@ -202,8 +202,8 @@ fn generate_noise_texture(
             let grid_y = y as f64 / height as f64;
 
             // Scale to the grid range and apply frequency
-            let nx = grid_x * GRID_SIZE as f64 * noise_settings.frequency;
-            let ny = grid_y * GRID_SIZE as f64 * noise_settings.frequency;
+            let nx = grid_x * GRID_SIZE as f64 * noise_settings.frequency * TILE_SIZE as f64;
+            let ny = grid_y * GRID_SIZE as f64 * noise_settings.frequency * TILE_SIZE as f64;
 
             let mut noise_value = 0.0;
             let mut amplitude = 1.0;
