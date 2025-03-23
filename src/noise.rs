@@ -57,7 +57,7 @@ fn generate_noise(
     mut events: EventReader<GenerateNoiseEvent>,
     noise_settings: Res<NoiseSettings>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    mut tiles: Query<(&NoiseControlled, &mut MeshMaterial2d<ColorMaterial>)>,
+    mut tiles: Query<(&NoiseControlled, &MeshMaterial2d<ColorMaterial>)>,
 ) {
     if events.read().next().is_none() {
         return;
@@ -65,7 +65,7 @@ fn generate_noise(
 
     let perlin = Perlin::new(noise_settings.seed);
 
-    for (controlled, mut mesh_material) in tiles.iter_mut() {
+    for (controlled, mesh_material) in tiles.iter_mut() {
         let (x, y) = controlled.position;
         let nx = x as f64 * noise_settings.frequency;
         let ny = y as f64 * noise_settings.frequency;
@@ -85,6 +85,8 @@ fn generate_noise(
 
         // Update material color based on noise value
         let color = Color::srgb(noise_value as f32, noise_value as f32, noise_value as f32);
-        mesh_material.0 = materials.add(color);
+        if let Some(material) = materials.get_mut(&mesh_material.0) {
+            *material = ColorMaterial::from(color);
+        }
     }
 }

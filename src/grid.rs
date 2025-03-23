@@ -15,13 +15,12 @@ fn spawn_grid(
     mut materials: ResMut<Assets<ColorMaterial>>,
 ) {
     let mesh = meshes.add(Rectangle::new(TILE_SIZE, TILE_SIZE));
-    let material = materials.add(Color::srgb(1.0, 1.0, 1.0));
 
     for x in 0..GRID_SIZE {
         for y in 0..GRID_SIZE {
             commands.spawn((
                 Mesh2d(mesh.clone()),
-                MeshMaterial2d(material.clone()),
+                MeshMaterial2d(materials.add(Color::srgb(1.0, 1.0, 1.0))),
                 Transform::from_xyz(grid_tile_center_to_world(x), grid_tile_center_to_world(y), 0.0),
                 NoiseControlled { position: (x, y) },
                 Name::new(format!("Tile ({}, {})", x, y)),
