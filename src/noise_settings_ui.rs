@@ -1,14 +1,14 @@
 // noise_settings_ui.rs
 use super::*;
 use crate::noise_texture::{GenerateNoiseEvent, NoiseSettings};
-use bevy_egui::{egui, EguiContext, EguiPlugin};
+use bevy_egui::{egui, EguiContext};
 use rand::random;
 
 pub struct NoiseSettingsUiPlugin;
 
 impl Plugin for NoiseSettingsUiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugins(EguiPlugin)
+        app
             .add_systems(Update, noise_settings_ui_system);
     }
 }

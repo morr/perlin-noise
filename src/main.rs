@@ -3,6 +3,7 @@ use bevy::{
     prelude::*,
     text::FontSmoothing,
 };
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 mod camera;
 use crate::camera::CameraPlugin;
@@ -41,6 +42,8 @@ fn main() {
                     ..default()
                 }),
         )
+        // .add_plugins(EguiPlugin)
+        .add_plugins(WorldInspectorPlugin::new())
         .add_plugins((
             CameraPlugin,
             GridPlugin,

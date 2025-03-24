@@ -171,6 +171,7 @@ fn generate_noise_and_update(
     mut query: Query<&mut MeshMaterial2d<ColorMaterial>, With<NoiseTexture>>,
 ) {
     if events.read().next().is_some() {
+        println!("generate_noise_and_update");
         // Generate the new noise in the inactive buffer
         generate_noise_texture(&noise_settings, &mut images, &buffers.inactive);
 
