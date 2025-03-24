@@ -4,7 +4,7 @@ pub struct DebugUiPlugin;
 
 impl Plugin for DebugUiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, render_debug_ui_info);
+        app.add_systems(Startup, render_debug_ui_info);
     }
 }
 
