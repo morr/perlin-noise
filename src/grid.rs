@@ -22,8 +22,9 @@ impl Plugin for GridPlugin {
     fn build(&self, app: &mut App) {
         app.init_state::<GridState>()
             .add_event::<TextureReadyEvent>()
-            .add_systems(Update, handle_texture_ready_event)
-            .add_systems(Update, spawn_grid.run_if(in_state(GridState::Ready)));
+            .add_systems(Startup, spawn_grid.after(noise_texture::initial_noise_generation))
+            .add_systems(Update, handle_texture_ready_event);
+
     }
 }
 
@@ -37,7 +38,6 @@ fn spawn_grid(
     let grid_world_size = GRID_SIZE as f32 * TILE_SIZE;
     let mesh = meshes.add(Rectangle::new(grid_world_size, grid_world_size));
 
-    // Position the mesh at the center (0,0)
     commands.spawn((
         Mesh2d(mesh),
         MeshMaterial2d(materials.add(ColorMaterial::from(noise_texture.0.clone()))),

@@ -146,7 +146,7 @@ fn create_empty_texture(size: UVec2) -> Image {
     texture
 }
 
-fn initial_noise_generation(
+pub fn initial_noise_generation(
     noise_settings: Res<NoiseSettings>,
     mut images: ResMut<Assets<Image>>,
     buffers: Res<NoiseTextureBuffers>,
@@ -171,8 +171,6 @@ fn generate_noise_and_update(
     mut query: Query<&mut MeshMaterial2d<ColorMaterial>, With<NoiseTexture>>,
 ) {
     if events.read().next().is_some() {
-        println!("generate_noise_and_update");
-        // Generate the new noise in the inactive buffer
         generate_noise_texture(&noise_settings, &mut images, &buffers.inactive);
 
         // Manual swap using a temporary variable to avoid multiple mutable borrows
