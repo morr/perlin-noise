@@ -152,15 +152,13 @@ pub fn initial_noise_generation(
     buffers: Res<NoiseTextureBuffers>,
     mut texture_ready_events: EventWriter<TextureReadyEvent>,
 ) {
-    // Generate the initial noise texture in both buffers for consistency
     generate_noise_texture(&noise_settings, &mut images, &buffers.active);
-    generate_noise_texture(&noise_settings, &mut images, &buffers.inactive);
+    // generate_noise_texture(&noise_settings, &mut images, &buffers.inactive);
 
     // Signal that the texture is ready
     texture_ready_events.send(TextureReadyEvent);
 }
 
-// Combined system that handles both generating noise and updating materials
 fn generate_noise_and_update(
     mut events: EventReader<GenerateNoiseEvent>,
     noise_settings: Res<NoiseSettings>,
