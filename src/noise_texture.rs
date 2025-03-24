@@ -36,13 +36,6 @@ impl Default for NoiseSettings {
     }
 }
 
-#[derive(Resource)]
-pub struct NoiseTextureBuffers {
-    pub active: Handle<Image>,
-    pub inactive: Handle<Image>,
-    pub is_first_active: bool,
-}
-
 #[derive(Event)]
 pub struct GenerateNoiseEvent;
 
@@ -95,22 +88,12 @@ fn setup_noise_texture(mut commands: Commands, mut images: ResMut<Assets<Image>>
         (GRID_SIZE as f32 * TILE_SIZE) as u32,
     );
 
-    // Create two identical textures with proper settings
-    let texture1 = create_empty_texture(texture_size);
-    let texture2 = create_empty_texture(texture_size);
+    // Create a single texture with proper settings
+    let texture = create_empty_texture(texture_size);
+    let handle = images.add(texture);
 
-    let handle1 = images.add(texture1);
-    let handle2 = images.add(texture2);
-
-    // Store both handles and track which is active
-    commands.insert_resource(NoiseTextureBuffers {
-        active: handle1.clone(),
-        inactive: handle2,
-        is_first_active: true,
-    });
-
-    // For compatibility with existing code
-    commands.insert_resource(NoiseTextureHandle(handle1));
+    // Store only a single handle
+    commands.insert_resource(NoiseTextureHandle(handle));
 }
 
 // Helper function to create a properly configured texture
@@ -149,11 +132,10 @@ fn create_empty_texture(size: UVec2) -> Image {
 pub fn initial_noise_generation(
     noise_settings: Res<NoiseSettings>,
     mut images: ResMut<Assets<Image>>,
-    buffers: Res<NoiseTextureBuffers>,
+    noise_texture: Res<NoiseTextureHandle>,
     mut texture_ready_events: EventWriter<TextureReadyEvent>,
 ) {
-    generate_noise_texture(&noise_settings, &mut images, &buffers.active);
-    // generate_noise_texture(&noise_settings, &mut images, &buffers.inactive);
+    generate_noise_texture(&noise_settings, &mut images, &noise_texture.0);
 
     // Signal that the texture is ready
     texture_ready_events.send(TextureReadyEvent);
@@ -163,29 +145,15 @@ fn generate_noise_and_update(
     mut events: EventReader<GenerateNoiseEvent>,
     noise_settings: Res<NoiseSettings>,
     mut images: ResMut<Assets<Image>>,
-    mut buffers: ResMut<NoiseTextureBuffers>,
-    mut noise_texture: ResMut<NoiseTextureHandle>,
+    noise_texture: Res<NoiseTextureHandle>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut query: Query<&mut MeshMaterial2d<ColorMaterial>, With<NoiseTexture>>,
 ) {
     if events.read().next().is_some() {
-        generate_noise_texture(&noise_settings, &mut images, &buffers.inactive);
+        generate_noise_texture(&noise_settings, &mut images, &noise_texture.0);
 
-        // Manual swap using a temporary variable to avoid multiple mutable borrows
-        let temp = buffers.active.clone();
-        buffers.active = buffers.inactive.clone();
-        buffers.inactive = temp;
+        let new_material = materials.add(ColorMaterial::from(noise_texture.0.clone()));
 
-        // Toggle the active buffer indicator
-        buffers.is_first_active = !buffers.is_first_active;
-
-        // Update the main handle
-        noise_texture.0 = buffers.active.clone();
-
-        // Create a new material with the updated texture
-        let new_material = materials.add(ColorMaterial::from(buffers.active.clone()));
-
-        // Update all NoiseTexture entities to use the new material
         for mut mesh_material in query.iter_mut() {
             *mesh_material = MeshMaterial2d(new_material.clone());
         }
